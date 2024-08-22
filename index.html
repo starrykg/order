@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点单系统</title>
+
+    <style>
+        /* 响应式设计 */
+        @media screen and (max-width: 300px) {
+            ul {
+                display: block;
+            }
+            ul li {
+                width: 100%;
+                display: block;
+                margin-bottom: 10px;
+                padding: 10px;
+                border: 1px solid #ccc;
+                overflow: hidden;
+            }
+            img {
+                float: center;
+                margin-right: 2px;
+                width: 5px;
+                height: 5px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>商品列表</h1>
+
+    <ul id="product-list"></ul>
+
+    <h2>下单</h2>
+
+    <div id="order-form">
+        <label for="user-name">您的姓名：</label>
+        <input type="text" id="user-name" required>
+        <button onclick="placeOrder()">确认下单</button>
+    </div>
+
+    <h2>订单总价</h2>
+    <p id="total-price">￥0</p>
+
+    <script>
+        let totalPrice = 0;
+
+        function increaseQuantity(productId) {
+            const quantityElement = document.getElementById(`quantity-${productId}`);
+            let quantity = parseInt(quantityElement.innerHTML);
+            quantity++;
+            quantityElement.innerHTML = quantity;
+            updateTotalPrice();
+        }
+
+        function decreaseQuantity(productId) {
+            const quantityElement = document.getElementById(`quantity-${productId}`);
+            let quantity = parseInt(quantityElement.innerHTML);
+            if (quantity > 0) {
+                quantity--;
+                quantityElement.innerHTML = quantity;
+                updateTotalPrice();
+            }
+        }
+	
+	function updateTotalPrice() {
+    const quantities = document.querySelectorAll('[id^="quantity-"]');
+    totalPrice = 0;
+
+    quantities.forEach(quantityElement => {
+        const productId = quantityElement.id.split('-')[1];
+        const quantity = parseInt(quantityElement.innerHTML);
+        const productPrice = parseFloat(document.querySelector(`#price-${productId}`).innerHTML.split('：')[1].slice(1));
+
+        if (!isNaN(productPrice) && !isNaN(quantity)) {
+            totalPrice += quantity * productPrice;
+        }
+    });
+
+    const totalPriceElement = document.getElementById('total-price');
+    if (!isNaN(totalPrice)) {
+        totalPriceElement.innerHTML = `￥${totalPrice.toFixed(2)}`;
+    } else {
+        totalPriceElement.innerHTML = '￥0';
+    }
+}
+
+        function placeOrder() {
+            const userName = document.getElementById('user-name').value;
+            const orderItems = [];
+
+            const quantities = document.querySelectorAll('[id^="quantity-"]');
+            quantities.forEach(quantityElement => {
+                const productId = quantityElement.id.split('-')[1];
+                const quantity = parseInt(quantityElement.innerHTML);
+                const productName = document.querySelector(`#name-${productId}`).innerHTML;
+                const productPrice = parseFloat(document.querySelector(`#price-${productId}`).innerHTML.split('：')[1].slice(1));
+
+                if (quantity > 0) {
+                    orderItems.push({
+		        id: productId,
+                        name: productName,
+                        price: productPrice,
+                        quantity: quantity
+                    });
+                }
+            });
+
+            const order = {
+                user: userName,
+                items: orderItems,
+                total: totalPrice.toFixed(2)
+            };
+
+            // 发送订单至服务器进行处理
+            fetch('http://127.0.0.1:5000/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(order)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    window.alert(data.message);  // 弹出后端返回的提示信息
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // 获取商品列表并渲染到页面
+        fetch('http://127.0.0.1:5000/api/products')
+            .then(response => response.json())
+            .then(products => {
+                const productList = document.getElementById('product-list');
+                products.forEach(product => {
+                    const listItem = document.createElement('li');
+
+                    // 商品图片
+                    const image = document.createElement('img');
+                    image.src = product.image;
+                    image.alt = product.name;
+                    image.style.width = '80px';
+                    image.style.height = '80px';
+                    listItem.appendChild(image);
+
+                    // 商品名称、价格和数量
+                    listItem.innerHTML += `
+                        <div>
+                            <p id="name-${product.id}">${product.name}</p>
+                            <p id="price-${product.id}">价格：￥${product.price}</p>
+                            <p>数量：<button onClick="decreaseQuantity(${product.id})">-</button> 
+                                <span id="quantity-${product.id}">0</span> 
+                                <button onClick="increaseQuantity(${product.id})">+</button>
+                            </p>
+                        </div>
+                    `;
+
+                    productList.appendChild(listItem);
+                });
+                updateTotalPrice();  // 确保在渲染商品列表后立即计算总价
+            });
+    </script>
+
+</body>
+</html>

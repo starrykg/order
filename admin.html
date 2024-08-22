@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Orders</title>
+</head>
+<body>
+    <h1>今日订单</h1>
+
+    <div id="orders">
+        <!-- Orders will be displayed here dynamically -->
+    </div>
+
+    <script>
+        // Assume you have a function to fetch data from the API
+        async function fetchData() {
+            const response = await fetch('http:127.0.0.1:5000/api/orders');
+            const data = await response.json();
+            displayOrders(data);
+        }
+
+        // Assume you have a function to display orders on the page
+        function displayOrders(data) {
+            const ordersContainer = document.getElementById('orders');
+            ordersContainer.innerHTML = '';
+
+            // Iterate through each user's orders
+            for (const user in data.orders_by_user) {
+                const userOrders = data.orders_by_user[user];
+
+                // Create a section for each user
+                const userSection = document.createElement('div');
+                userSection.innerHTML = `<h2>${user}</h2>`;
+
+                // Iterate through each product in the user's orders
+                for (const product of userOrders.products) {
+                    userSection.innerHTML += `<p>${product.name}: $${product.price.toFixed(2)}</p>`;
+                }
+
+                // Display total price for the user
+                userSection.innerHTML += `<p>Total Price: $${userOrders.total_price.toFixed(2)}</p>`;
+
+                // Append the user's section to the main container
+                ordersContainer.appendChild(userSection);
+            }
+
+            // Display total price for all orders
+            ordersContainer.innerHTML += `<h3>今日总金额: $${data.total_price.toFixed(2)}</h3>`;
+        }
+
+        // Fetch data when the page loads
+        fetchData();
+    </script>
+</body>
+</html>
+
